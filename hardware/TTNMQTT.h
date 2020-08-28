@@ -1,15 +1,7 @@
 #pragma once
 
 #include "MySensorsBase.h"
-#ifdef BUILTIN_MQTT
-#include "../MQTT/mosquittopp.h"
-#else
-#ifdef WIN32
-#include "../MQTT/mosquittopp.h"
-#else
-#include <mosquittopp.h>
-#endif
-#endif
+#include "../main/mosquitto_helper.h"
 #include "../main/BaroForecastCalculator.h"
 
 namespace Json
@@ -17,7 +9,7 @@ namespace Json
 	class Value;
 };
 
-class CTTNMQTT : public MySensorsBase, mosqpp::mosquittopp
+class CTTNMQTT : public MySensorsBase, mosqdz::mosquittodz
 {
 public:
 	CTTNMQTT(const int ID, const std::string &IPAddress, const unsigned short usIPPort, const std::string &Username, const std::string &Password, const std::string &CAFile);
@@ -30,7 +22,6 @@ public:
 	void on_subscribe(int mid, int qos_count, const int *granted_qos) override;
 
 	void SendMessage(const std::string &Topic, const std::string &Message);
-
 public:
 	void UpdateUserVariable(const std::string &varName, const std::string &varValue);
 
@@ -44,18 +35,21 @@ protected:
 	std::string m_Password;
 	std::string m_CAFilename;
 	std::string m_TopicIn;
+	std::shared_ptr<std::thread> m_thread;
+
 	virtual bool StartHardware() override;
 	virtual bool StopHardware() override;
 	void StopMQTT();
 	void Do_Work();
 	virtual void SendHeartbeat();
 	void WriteInt(const std::string &sendStr) override;
-	std::shared_ptr<std::thread> m_thread;
 private:
+	std::map<std::string, CBaroForecastCalculator> m_forecast_calculators;
+
 	bool ConnectInt();
 	bool ConnectIntEx();
-	Json::Value GetSensorWithChannel(const Json::Value &root, const std::string &stype, const int sChannel);
+	Json::Value GetSensorWithChannel(const Json::Value &root, const int sChannel);
 	void FlagSensorWithChannelUsed(Json::Value &root, const std::string &stype, const int sChannel);
-	std::map<std::string, CBaroForecastCalculator> m_forecast_calculators;
+	int GetAddDeviceAndSensor(const int m_HwdId, const std::string &DeviceName, const std::string &MacAddress);
 };
 

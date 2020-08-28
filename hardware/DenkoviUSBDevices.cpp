@@ -7,13 +7,6 @@
 
 #define MAX_POLL_INTERVAL 3600*1000
 
-enum _edaeUsbState
-{
-	RESPOND_RECEIVED = 0,		//0
-	DAE_USB16_UPDATE_IO,					//1
-	DAE_USB16_ASK_CMD				//2
-};
-
 #define DAE_IO_TYPE_RELAY		2
 
 CDenkoviUSBDevices::CDenkoviUSBDevices(const int ID, const std::string& comPort, const int model) :
@@ -90,11 +83,9 @@ void CDenkoviUSBDevices::readCallBack(const char * data, size_t len)
 		m_readingNow = false;
 		return; //receiving not enabled
 	}
-	uint8_t tmp = (unsigned char)data[0];
-
 	switch (m_iModel) {
 	case DDEV_USB_16R:
-		if (m_Cmd == DAE_USB16_ASK_CMD) {
+		if (m_Cmd == _edaeUsbState::DAE_USB16_ASK_CMD) {
 			uint8_t firstEight, secondEight;
 			if (len == 2) {
 				firstEight = (unsigned char)data[0];
@@ -104,9 +95,8 @@ void CDenkoviUSBDevices::readCallBack(const char * data, size_t len)
 				_log.Log(LOG_ERROR, "USB 16 Relays-VCP: Response error.");
 				return;
 			}
-			uint8_t z = 0;
 			for (uint8_t ii = 1; ii < 9; ii++) {
-				z = (firstEight >> (8 - ii)) & 0x01;
+				//z = (firstEight >> (8 - ii)) & 0x01;
 				SendSwitch(DAE_IO_TYPE_RELAY, ii, 255, (((firstEight >> (8 - ii)) & 0x01) != 0) ? true : false, 0, "Relay " + std::to_string(ii));
 			}
 			for (uint8_t ii = 1; ii < 9; ii++)
@@ -137,8 +127,8 @@ bool CDenkoviUSBDevices::StopHardware()
 
 void CDenkoviUSBDevices::Do_Work()
 {
-	int poll_interval = m_pollInterval / 100;
-	int poll_counter = poll_interval - 2;
+	//int poll_interval = m_pollInterval / 100;
+	//int poll_counter = poll_interval - 2;
 
 	int msec_counter = 0;
 
@@ -161,7 +151,7 @@ void CDenkoviUSBDevices::Do_Work()
 	_log.Log(LOG_STATUS, "Denkovi: Worker stopped...");
 }
 
-bool CDenkoviUSBDevices::WriteToHardware(const char *pdata, const unsigned char length)
+bool CDenkoviUSBDevices::WriteToHardware(const char *pdata, const unsigned char /*length*/)
 {
 	m_updateIo = true;
 	const tRBUF *pSen = reinterpret_cast<const tRBUF*>(pdata);
@@ -190,7 +180,7 @@ bool CDenkoviUSBDevices::WriteToHardware(const char *pdata, const unsigned char 
 			szCmd << "-//";
 		else if (command == light2_sOn)
 			szCmd << "+//";
-		m_Cmd = DAE_USB16_UPDATE_IO;
+		m_Cmd = _edaeUsbState::DAE_USB16_UPDATE_IO;
 		write(szCmd.str());
 		return true;
 	}
@@ -207,7 +197,7 @@ void CDenkoviUSBDevices::GetMeterDetails()
 
 	switch (m_iModel) {
 	case DDEV_USB_16R:
-		m_Cmd = DAE_USB16_ASK_CMD;
+		m_Cmd = _edaeUsbState::DAE_USB16_ASK_CMD;
 		write("ask//");
 		break;
 	}
